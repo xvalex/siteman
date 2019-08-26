@@ -199,6 +199,7 @@ for dirpath, dirnames, filenames in os.walk('.'):
     for dirname in dirnames:
         os.mkdir(os.path.join(site_home, dirpath, dirname))
     for filename in filenames:
+        if filename == '.emptydir': continue
         src = os.path.join(dirpath, filename)
         dst = os.path.join(site_home, dirpath, filename)
         t = open(src, 'r').read()
