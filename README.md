@@ -33,8 +33,9 @@ Default file and directory layout:
 
 Configuration files:
 
-| /etc/nginx/sites-avalable/{site}.conf    | Link to /var/www/{site}/nginx.conf   |
-| /etc/nginx/sites-enabled/{site}.conf     | Link to /var/www/{site}/nginx.conf   |
-| /etc/php/{phpver}/fpm/pool.d/{site}.conf | Link to /var/www/{site}/phppool.conf |
+| Config file                              | Links to                     |
+|------------------------------------------|------------------------------|
+| /etc/nginx/sites-enabled/{site}.conf     | /var/www/{site}/nginx.conf   |
+| /etc/php/{phpver}/fpm/pool.d/{site}.conf | /var/www/{site}/phppool.conf |
 
 All paths are configurable
