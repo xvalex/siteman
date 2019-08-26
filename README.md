@@ -7,10 +7,13 @@ Creates basic file and directory structures from templates. Users are isolated f
 
 You must have a working domain before adding a site.
 
-> # git clone https://github.com/xvalex/siteman.git
-> # siteman/addsite.py --user www-test --site test.example.com --create-user --php
+```Shell
+# apt install python nginx php7.2 php7.2-fpm php7.2-common php7.2-cli
+# git clone https://github.com/xvalex/siteman.git
+# python siteman/addsite.py --user www-test --site test.example.com --create-user --php
+```
 
-
+## Default config
 
 Default file and directory layout:
 
