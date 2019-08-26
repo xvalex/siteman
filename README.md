@@ -8,9 +8,11 @@ Creates basic file and directory structures from templates. Users are isolated f
 You must have a working domain before adding a site.
 
 ```Shell
-# apt install python nginx php7.2 php7.2-fpm php7.2-common php7.2-cli
+# apt install python nginx php7.2 php7.2-fpm php7.2-common php7.2-cli curl
 # git clone https://github.com/xvalex/siteman.git
 # python siteman/addsite.py --user www-test --site test.example.com --create-user --php
+# curl -Is http://test.spbniifk.ru | head -1
+HTTP/1.1 200 OK
 ```
 
 ## Default config
@@ -19,11 +21,11 @@ Default file and directory layout:
 
 | Name                         | Permissions              | Descrpition            |
 |------------------------------|--------------------------|------------------------|
-| *User home*                  |                          |                        |
+| **User home**                |                          |                        |
 | /home/{user}                 | {user}:{group} 750       | User home              |
 | /home/{user}/{site}          |                          | Link to site home      |
 | /home/{user}/wwwbackup       | {user}:{group} 700       | Backups                |
-| *Site home*                  |                          |                        |
+| **Site home**                |                          |                        |
 | /var/www/{site}              | root:{group} 770         | Site home              |
 | /var/www/{site}/logs         | root:{group} 770         | Logs (nginx, php, etc) |
 | /var/www/{site}/public_html  | {user}:{group} 750       | www root               |
