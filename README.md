@@ -11,7 +11,7 @@ You must have a working domain before adding a site.
 # apt install python nginx php7.2 php7.2-fpm php7.2-common php7.2-cli curl
 # git clone https://github.com/xvalex/siteman.git
 # python siteman/addsite.py --user www-test --site test.example.com --create-user --php
-# curl -Is http://test.spbniifk.ru | head -1
+# curl -Is http://test.example.com | head -1
 HTTP/1.1 200 OK
 ```
 
