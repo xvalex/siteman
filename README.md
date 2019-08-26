@@ -7,20 +7,25 @@ Creates basic file and directory structures from templates. Users are isolated f
 
 You must have a working domain before adding a site.
 
-> # git clone https://github.com/xvalex/siteman.git
-> # siteman/addsite.py --user www-test --site test.example.com --create-user --php
+```Shell
+# apt install python nginx php7.2 php7.2-fpm php7.2-common php7.2-cli curl
+# git clone https://github.com/xvalex/siteman.git
+# python siteman/addsite.py --user www-test --site test.example.com --create-user --php
+# curl -Is http://test.example.com | head -1
+HTTP/1.1 200 OK
+```
 
-
+## Default config
 
 Default file and directory layout:
 
 | Name                         | Permissions              | Descrpition            |
 |------------------------------|--------------------------|------------------------|
-| *User home*                  |                          |                        |
+| **User home**                |                          |                        |
 | /home/{user}                 | {user}:{group} 750       | User home              |
 | /home/{user}/{site}          |                          | Link to site home      |
 | /home/{user}/wwwbackup       | {user}:{group} 700       | Backups                |
-| *Site home*                  |                          |                        |
+| **Site home**                |                          |                        |
 | /var/www/{site}              | root:{group} 770         | Site home              |
 | /var/www/{site}/logs         | root:{group} 770         | Logs (nginx, php, etc) |
 | /var/www/{site}/public_html  | {user}:{group} 750       | www root               |
@@ -30,8 +35,9 @@ Default file and directory layout:
 
 Configuration files:
 
-| /etc/nginx/sites-avalable/{site}.conf    | Link to /var/www/{site}/nginx.conf   |
-| /etc/nginx/sites-enabled/{site}.conf     | Link to /var/www/{site}/nginx.conf   |
-| /etc/php/{phpver}/fpm/pool.d/{site}.conf | Link to /var/www/{site}/phppool.conf |
+| Config file                              | Links to                     |
+|------------------------------------------|------------------------------|
+| /etc/nginx/sites-enabled/{site}.conf     | /var/www/{site}/nginx.conf   |
+| /etc/php/{phpver}/fpm/pool.d/{site}.conf | /var/www/{site}/phppool.conf |
 
 All paths are configurable
