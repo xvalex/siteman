@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse, re, socket, sys, os, pwd, grp
-from config import *
+import config
 
 def is_root():
     """Check admin permissions."""
@@ -50,17 +50,12 @@ def recursive_chmod(path, file_mode, dir_mode):
 def can_resolve(hostname):
     try:
         socket.gethostbyname(hostname)
-        return 1
+        return True
     except socket.error:
-        return 0
+        return False
 
 def is_correct_user_name(user):
     return re.match("^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$", user)
-
-def instantiate_template(template, dest, keys):
-    t = open(template, 'r').read()
-    t = t.format(**keys)
-    open(dest, 'w').write(t)
 
 ###############################################################################
 # Parse arguments
@@ -73,42 +68,54 @@ parser.add_argument('--site', type=str, nargs=1, required=True,
 parser.add_argument('--user', type=str, nargs=1, required=True,
                     help='User owns this site')
 
-parser.add_argument('--wwwuser', type=str, nargs=1, default=[ WWWUSER ],
-                    help="www user (default: '" + WWWUSER + "'")
+parser.add_argument('--wwwuser', type=str, nargs=1, default=[ config.default_wwwuser ],
+                    help="www user (default: '" + config.default_wwwuser + "'")
 
-parser.add_argument('--wwwgroup', type=str, nargs=1, default=[ WWWGROUP ],
-                    help="www group (default: '" + WWWGROUP + "'")
+parser.add_argument('--wwwgroup', type=str, nargs=1, default=[ config.default_wwwgroup ],
+                    help="www group (default: '" + config.default_wwwgroup + "'")
 
 parser.add_argument('--php', action='store_true',
                     help='Enable PHP')
 
+parser.add_argument('--phpver', type=str, nargs=1, default=[ config.default_phpver ],
+                    help="PHP Version (default: '" + config.default_phpver + "'")
+
 parser.add_argument('--create-user', action='store_true',
                     help='Create new user for this site')
 
-parser.add_argument('--get-cert', action='store_true',
-                    help="Acquire Let's Encrypt certificate for this site")
-
 args = parser.parse_args()
+
+###############################################################################
 
 site = args.site[0]
 user = args.user[0]
+group = args.user[0]
 wwwuser = args.wwwuser[0]
 wwwgroup = args.wwwgroup[0]
-site_home = os.path.join(SITE_HOME, site)
-user_home = os.path.join(USER_HOME, user)
-site_nginx_conf = os.path.join(site_home, 'nginx.conf')
-site_phppool_conf = os.path.join(site_home, 'phppool.conf')
-nginx_available_conf = os.path.join(NGINX_CONF_DIR, "sites-available", site + ".conf")
-nginx_enabled_conf = os.path.join(NGINX_CONF_DIR, "sites-enabled", site + ".conf")
-phppool_conf = os.path.join(PHPPOOL_CONF_DIR, site + ".conf")
+phpver = args.phpver[0]
 
-backup_dir = os.path.join(user_home, "backup")
-backup_script = os.path.join(site_home, 'backup.sh')
+keys = {
+    'site': site,
+    'user': user,
+    'group': group,
+    'wwwuser': wwwuser,
+    'wwwgroup': wwwgroup,
+    'phpver': phpver
+}
+
+site_home = config.site_home.format(**keys)
+user_home = config.user_home.format(**keys)
+backup_dir = config.backup_dir.format(**keys)
+phppool_conf = config.phppool_conf.format(**keys)
+nginx_conf = config.nginx_conf.format(**keys)
+create_user_cmd = config.create_user_cmd.format(**keys)
+delete_user_cmd = config.delete_user_cmd.format(**keys)
+reload_cmd = config.reload_cmd.format(**keys)
 
 uid = get_uid(user)
+gid = get_gid(group)
 wwwuid = get_uid(wwwuser)
 wwwgid = get_gid(wwwgroup)
-
 
 ###############################################################################
 # Check parameters
@@ -136,23 +143,11 @@ if not can_resolve(site):
 if os.path.lexists(site_home):
     sys.exit("Site home '" + site_home + "' already exist")
 
-if not os.path.lexists(os.path.join(NGINX_CONF_DIR, "sites-available")):
-    sys.exit("'" + os.path.join(NGINX_CONF_DIR, "sites-available") + "' does not exist")
+if not os.path.isdir(os.path.dirname(nginx_conf)):
+    sys.exit("Directory '" + os.path.dirname(nginx_conf) + "' does not exist")
 
-if not os.path.lexists(os.path.join(NGINX_CONF_DIR, "sites-enabled")):
-    sys.exit("'" + os.path.join(NGINX_CONF_DIR, "sites-enabled") + "' does not exist")
-
-if os.path.lexists(nginx_available_conf):
-    sys.exit("Config file '" + nginx_available_conf + "' already exist")
-
-if os.path.lexists(nginx_enabled_conf):
-    sys.exit("Config file '" + nginx_enabled_conf + "' already exist")
-
-if args.php and not os.path.lexists(PHPPOOL_CONF_DIR):
-    sys.exit("'" + PHPPOOL_CONF_DIR + "' does not exist")
-
-if args.php and os.path.lexists(phppool_conf):
-    sys.exit("Config file '" + phppool_conf + "' already exist")
+if args.php and not os.path.isdir(os.path.dirname(phppool_conf)):
+    sys.exit("Directory '" + os.path.dirname(phppool_conf) + "' does not exist")
 
 # Check root rights
 
@@ -160,13 +155,21 @@ if not is_root():
   sys.exit("Please, run as root")
 
 ###############################################################################
-# Template keys
+# Choose template and set template keys
+
+if args.php:
+  template = 'nginx-php';
+else:
+  template = 'nginx-nophp'
 
 template_keys = {
+    'template': template,
     'site': site,
     'user': user,
+    'group': group,
     'wwwuser': wwwuser,
     'wwwgroup': wwwgroup,
+    'phpver': phpver,
     'site_home': site_home,
     'user_home': user_home,
     'backup_dir': backup_dir
@@ -176,67 +179,64 @@ template_keys = {
 # Create user if nessesary
 
 if args.create_user:
-    create_user_cmd = CREATE_USER_CMD.format(**template_keys)
     os.system(create_user_cmd)
     uid = get_uid(user)
-    if uid is None:
-        sys.exit("Cannot create user '" + user + "'")
+    gid = get_gid(group)
+    if uid is None: sys.exit("Cannot create user '" + user + "'")
+    if gid is None: sys.exit("Cannot create group '" + group + "'")
     recursive_chmod(user_home, 0o640, 0o750)
 
 if not os.path.exists(backup_dir):
-    os.mkdir(backup_dir, 0o700) # Owner-only access
+    os.mkdir(backup_dir, 0o700)
+    os.chown(backup_dir, uid, gid);
 
 ###############################################################################
-# Create site root
+# Instantiate template
 
-os.mkdir(site_home, 0o750)
-os.mkdir(os.path.join(site_home, "public_html"), 0o750) # Read-only www access
-os.mkdir(os.path.join(site_home, "logs"), 0o770)        # Allow www write access
+os.mkdir(site_home)
+os.chdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'templates', template))
+for dirpath, dirnames, filenames in os.walk('.'):
+    for dirname in dirnames:
+        os.mkdir(os.path.join(site_home, dirpath, dirname))
+    for filename in filenames:
+        src = os.path.join(dirpath, filename)
+        dst = os.path.join(site_home, dirpath, filename)
+        t = open(src, 'r').read()
+        t = t.format(**template_keys)
+        open(dst, 'w').write(t)
 
-instantiate_template(os.path.join('templates', 'backup.sh'),
-                     backup_script, template_keys)
-os.chmod(backup_script, 0o700)
+# Site home: root:{group} 770
+recursive_chown(site_home, 0, gid)
+recursive_chmod(site_home, 0o660, 0o770)
 
+# public_html: {user}:{group} 750
+recursive_chown(os.path.join(site_home, 'public_html'), uid, gid)
+recursive_chmod(os.path.join(site_home, 'public_html'), 0o640, 0o750)
+
+# nginx.conf: root:{group} 640
+os.chmod(os.path.join(site_home, 'nginx.conf'), 0o640)
+
+# phppool.conf: root:{group} 640
 if args.php:
-    instantiate_template(os.path.join('templates', 'nginx.enablephp.conf'),
-                         site_nginx_conf, template_keys)
-    instantiate_template(os.path.join('templates', 'phppool.conf'),
-                         site_phppool_conf, template_keys)
-    instantiate_template(os.path.join('templates', 'index.php'),
-                         os.path.join(site_home, 'public_html', 'index.php'), template_keys)
-    os.chmod(site_nginx_conf, 0o700)
-    os.chmod(phppool.conf, 0o700)
-else:
-    instantiate_template(os.path.join('templates', 'nginx.nophp.conf'),
-                         site_nginx_conf, template_keys)
-    instantiate_template(os.path.join('templates', 'index.html'),
-                         os.path.join(site_home, 'public_html', 'index.html'), template_keys)
-    os.chmod(site_nginx_conf, 0o700)
-
-recursive_chown(site_home, uid, wwwgid)
+    os.chmod(os.path.join(site_home, 'backup.sh'), 0o640)
 
 ###############################################################################
 # Link config files
 
-os.symlink(site_nginx_conf, nginx_available_conf)
-os.chown(nginx_available_conf, uid, wwwgid);
-
-os.symlink(site_nginx_conf, nginx_enabled_conf)
-os.chown(nginx_enabled_conf, uid, wwwgid);
+if os.path.lexists(nginx_conf): os.unlink(nginx_conf)
+os.symlink(os.path.join(site_home, 'nginx.conf'), nginx_conf)
 
 if args.php:
-    os.symlink(site_phppool_conf, phppool_conf)
-    os.chown(phppool_conf, uid, wwwgid);
+    if os.path.lexists(phppool_conf): os.unlink(phppool_conf)
+    os.symlink(os.path.join(site_home, 'phppool.conf'), phppool_conf)
 
 ###############################################################################
 # Link site home to user home
 
 os.symlink(site_home, os.path.join(user_home, site))
-os.chown(os.path.join(user_home, site), uid, wwwgid);
 
 ###############################################################################
 # Reload services
 
 print "Reloading services"
-reload_cmd = RELOAD_CMD.format(**template_keys)
 os.system(reload_cmd)
