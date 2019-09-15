@@ -1,0 +1,17 @@
+{site_home}/logs/*.log {{
+	monthly
+	missingok
+	rotate 36
+	compress
+	notifempty
+	sharedscripts
+	prerotate
+		if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
+			run-parts /etc/logrotate.d/httpd-prerotate; \
+		fi \
+	endscript
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+		/usr/lib/php/php7.2-fpm-reopenlogs
+	endscript
+}}

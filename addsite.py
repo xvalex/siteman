@@ -106,8 +106,9 @@ keys = {
 site_home = config.site_home.format(**keys)
 user_home = config.user_home.format(**keys)
 backup_dir = config.backup_dir.format(**keys)
-phppool_conf = config.phppool_conf.format(**keys)
 nginx_conf = config.nginx_conf.format(**keys)
+phppool_conf = config.phppool_conf.format(**keys)
+logrotate_conf = config.logrotate_conf.format(**keys)
 create_user_cmd = config.create_user_cmd.format(**keys)
 delete_user_cmd = config.delete_user_cmd.format(**keys)
 reload_cmd = config.reload_cmd.format(**keys)
@@ -226,6 +227,9 @@ if args.php:
 
 if os.path.lexists(nginx_conf): os.unlink(nginx_conf)
 os.symlink(os.path.join(site_home, 'nginx.conf'), nginx_conf)
+
+if os.path.lexists(logrotate_conf): os.unlink(logrotate_conf)
+os.symlink(os.path.join(site_home, 'logrotate'), logrotate_conf)
 
 if args.php:
     if os.path.lexists(phppool_conf): os.unlink(phppool_conf)

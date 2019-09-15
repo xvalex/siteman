@@ -30,6 +30,7 @@ Default file and directory layout:
 | /var/www/{site}/logs         | root:{group} 770         | Logs (nginx, php, etc) |
 | /var/www/{site}/public_html  | {user}:{group} 750       | www root               |
 | /var/www/{site}/backup.sh    | {user}:{group} 700       | Backup script          |
+| /var/www/{site}/logrotate    | root:{group} 740         | Logrotate config       |
 | /var/www/{site}/nginx.conf   | root:{group} 640         | Nginx config file      |
 | /var/www/{site}/phppool.conf | root:{group} 640         | PHP pool config file   |
 
@@ -39,5 +40,5 @@ Configuration files:
 |------------------------------------------|------------------------------|
 | /etc/nginx/sites-enabled/{site}.conf     | /var/www/{site}/nginx.conf   |
 | /etc/php/{phpver}/fpm/pool.d/{site}.conf | /var/www/{site}/phppool.conf |
+| /etc/logrotate.d/{site}                  | /var/www/{site}/logrotate    |
 
-All paths are configurable
